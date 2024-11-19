@@ -20,6 +20,7 @@ enum SequenceType: CaseIterable {
 class GameScene: SKScene {
     
     var gamescore : SKLabelNode!
+    var gameOverNode: SKSpriteNode?
     var score = 0 {
         didSet {
             gamescore.text = "Score: \(score)"
@@ -70,6 +71,22 @@ class GameScene: SKScene {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             self?.tossEnemies()
         }
+    }
+    
+    func showGameOver() {
+        if let gameOverNode = gameOverNode {
+                gameOverNode.removeFromParent()
+            }
+            
+            // Create a new Game Over node
+            let node = SKSpriteNode(imageNamed: "gameOver")
+            node.position = CGPoint(x: size.width / 2, y: size.height / 2)
+            node.zPosition = 10
+            node.name = "gameOver"
+            addChild(node)
+            
+            // Store the reference
+            gameOverNode = node
     }
     
     
@@ -176,20 +193,25 @@ class GameScene: SKScene {
     }
     
     func endGame(triggeredByBomb: Bool){
-        guard  isGameEnded == false else { return }
+        guard isGameEnded == false else { return }
 
             isGameEnded = true
             physicsWorld.speed = 0
             isUserInteractionEnabled = false
 
+            // Stop bomb sound
             bombSoundEffect?.stop()
             bombSoundEffect = nil
 
+            // Update the lives images if bomb triggered
             if triggeredByBomb {
                 livesImages[0].texture = SKTexture(imageNamed: "sliceLifeGone")
                 livesImages[1].texture = SKTexture(imageNamed: "sliceLifeGone")
                 livesImages[2].texture = SKTexture(imageNamed: "sliceLifeGone")
             }
+
+            // Show game over screen
+            showGameOver()
     }
     
     func playSwooshSound(){
@@ -214,20 +236,36 @@ class GameScene: SKScene {
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
-        activeSlicePoints.removeAll(keepingCapacity: true)
-        
-        let location = touch.location(in: self)
-        activeSlicePoints.append(location)
-        
-        
-        redawActiveSlice()
-        
-        activeSliceBG.removeAllActions()
-        activeSliceFG.removeAllActions()
-        
-        activeSliceBG.alpha = 1
-        activeSliceFG.alpha = 1
+           
+           let location = touch.location(in: self)
+           
+           // Ensure the game over node is clickable by bringing it to the front
+           if let gameOverNode = gameOverNode {
+               gameOverNode.zPosition = 10
+           }
 
+           let nodesAtPoint = nodes(at: location)
+           
+           // Check if the game over node is clicked
+           for node in nodesAtPoint {
+               if node.name == "gameOver" {
+                   print("Game over clicked")
+                   restartGame()
+                   return
+               }
+           }
+           
+           // Handle other touches (like slicing)
+           activeSlicePoints.removeAll(keepingCapacity: true)
+           activeSlicePoints.append(location)
+           
+           redawActiveSlice()
+           
+           activeSliceBG.removeAllActions()
+           activeSliceFG.removeAllActions()
+           
+           activeSliceBG.alpha = 1
+           activeSliceFG.alpha = 1
     }
     
     func redawActiveSlice(){
@@ -450,5 +488,21 @@ class GameScene: SKScene {
             sequencePosition += 1
             nextSequenceQueued = false
     }
+    
+    func restartGame() {
+        // Reset the game state
+        print("Oyun yeniden başlatıldı")
+            // Örnek olarak sahneyi yeniden yükleyebilirsiniz
+            let newScene = GameScene(size: self.size)
+            let transition = SKTransition.fade(withDuration: 1.0)
+            self.view?.presentScene(newScene, transition: transition)
+    }
+
+
+    
+  
+    
+    
+    
     
 }
